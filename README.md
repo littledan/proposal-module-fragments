@@ -20,7 +20,7 @@ This proposal adds a syntax to JavaScript to allow for several JavaScript module
 
 ```js
 // filename: app.js
-module "#count" {
+module countBlock {
   let i = 0;
 
   export function count() {
@@ -29,14 +29,14 @@ module "#count" {
   }
 }
 
-module "#uppercase" {
+export module uppercaseBlock {
   export function uppercase(string) {
     return string.toUpperCase();
   }
 }
 
-import { count } from "#count";
-import { uppercase } from "#uppercase";
+import { count } from countBlock;
+import { uppercase } from uppercaseBlock;
 
 console.log(count()); // 1
 console.log(uppercase("daniel")); // "DANIEL"
@@ -52,7 +52,8 @@ Module fragments can also be used outside of the file where they are defined, by
 
 ```html
 <script type=module>
-  import { uppercase } from "./app.js#uppercase";
+  import { uppercaseBlock } from "./app.js";
+  import { uppercase } from uppercaseBlock;
   console.log(uppercase("yes")); // "YES"
 </script>
 ```
@@ -70,7 +71,7 @@ ModuleItem :
     StatementListItem[~Yield, ~Await, ~Return]
     <ins>ModuleFragment</ins>
 
-ModuleFragment : module [no LineTerminator here] ModuleSpecifier { Module }
+ModuleFragment : module [no LineTerminator here] Identifier { Module }
 ```
 
 Module fragments may not be nested inside of other module fragments; they can only be defined at the top level.
@@ -92,28 +93,6 @@ Within a particular Realm (e.g., HTML document), if a module fragment is importe
 ## HTML integration
 
 Note: The following is framed to give details for HTML/the Web platform, but other platforms which aim to be analogous to the Web where appropriate (e.g., Node.js) may wish to follow these designs as well.
-
-### Module fragments are named by URL fragments
-
-When used on the Web, the string which follows the `module` keyword is required to be the character `#` followed by a [URL fragment](https://url.spec.whatwg.org/#concept-url-fragment).
-
-```js
-// In https://example.com/bundle.js
-module "#counts" {
-  let i = 0;
-
-  export function count() {
-    i++;
-    return i;
-  }
-}
-```
-
-This module fragment `#counts` may be imported from within that particular JS file as `#counts`, or from anywhere else from an absolute URL, e.g., `"https://example.com/bundle.js#counts"` (or a relative URL where appropriate).
-
-Some further rules limiting how module fragments can be used in the Web:
-- No two module fragments may have the same specifier
-- Modules which are inline `<script type=module> /* ... */ </script>` tags in HTML may not use module fragments (since there would be no clear URL for them)
 
 ### `import.meta.url`
 
@@ -153,14 +132,6 @@ The document `index.html` will contain `d` when run.
 JS module fragments, like all other modules, are kept track of in the [module map](https://html.spec.whatwg.org/#module-map). Whenever a JavaScript module which contains module fragments is imported (whether or not the fragment was imported), there is a module map entry made for each module fragment. The module fragments (as well as the top-level module) only have their dependencies loaded if they are *directly* imported; other entries may exist as a side effect, since they were found in the same file, but it's not time to fetch and parse their dependencies until that particular module is imported. This means that modules in the module map will need an extra bit to track whether they are "loaded" in this sense.
 
 ## FAQ
-
-### Why the `#`?
-
-It's @littledan's goal in life to make JS programmers write the `#` character all the time.
-
-No, seriously: the idea is to associate module fragments with the broader concept of URL fragment identifiers. Such an association makes it clear how module fragment relate to the broader pattern of using URLs for module specifiers, and it makes a clear syntax for importing a module fragment defined in a different file. Using fragments also makes this feature more "stateless"--you don't have to worry about loading things int he right order, getting the mapping in place before referring to it.
-
-Anyway, the interpretation of the specifier is host-defined, and not all hosts have to use `#`.
 
 ### Does this proposal meet privacy concerns about bundling?
 
